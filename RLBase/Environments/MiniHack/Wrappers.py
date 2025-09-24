@@ -33,45 +33,65 @@ import warnings
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+from gymnasium.core import ActionWrapper, ObservationWrapper, RewardWrapper
+from gymnasium.vector import VectorWrapper
 
-# Ensure MiniHack envs are registered with Gymnasium when this module is imported
-try:  # pragma: no cover
-    import minihack  # noqa: F401
-except Exception:  # pragma: no cover
-    minihack = None
+import minihack
 
-import traceback
+from nle import nethack
 from nle.env.tasks import NetHackStaircase
 
+class OneHotCharsWrapper(ObservationWrapper):
+    def __init__(self, env, char_vocab=(" ", "-", "|", "#", ".", "<", ">", "@", "+")):
+        super().__init__(env)
+        self.char_vocab = char_vocab
+        # Reserve last index for unknown
+        self.char_to_idx = {c: i for i, c in enumerate(char_vocab)}
+        self.unknown_idx = len(char_vocab)
+
+        char_shape = env.observation_space["chars"].shape  # (H, W)
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=1,
+            shape=char_shape + (len(char_vocab) + 1,),  # +1 for unknown
+            dtype=np.int8,
+        )
+
+    def observation(self, obs):
+        chars = obs["chars"]  # (H, W) integers (ASCII codes)
+        # Convert ASCII -> characters
+        char_array = np.vectorize(chr)(chars)
+        # Map characters to indices (default → unknown_idx)
+        idx_array = np.vectorize(self.char_to_idx.get)(char_array, self.unknown_idx)
+        # One-hot encode
+        one_hot = np.eye(len(self.char_vocab) + 1, dtype=np.int8)[idx_array]
+        return one_hot
+    
+class FixedSeedWrapper(gym.Wrapper):
+    """Always reset MiniHack with the same seed so the map layout is identical."""
+    def __init__(self, env, seed: int):
+        super().__init__(env)
+        self._seed = int(seed)
+
+    # Gymnasium API: match the signature exactly
+    def reset(self, *, seed=None, options=None):
+        # Always force the same seed (ignore caller's seed)
+        base = self.env.unwrapped
+        base.seed(self._seed)
+        return self.env.reset(seed=self._seed, options=options)
+
+class MovementActionWrapper(gym.Wrapper):
+    """
+    Restrict the action space to only movement actions in MiniHack/NLE.
+    """
+    def __init__(self, env):
+        super().__init__(env)
+        base = self.env.unwrapped
+        # All 8 compass directions
+        movement_actions = list(nethack.CompassDirection)
+        base.actions = movement_actions
 
 class MiniHackWrap(gym.Env):
-    """
-    Minimal MiniHack wrapper that:
-    - Uses built-in agent-centric crop observations (e.g., 'chars_crop' or 'glyphs_crop').
-    - Appends goal distance (dx, dy) to the observation (relative to crop center).
-    - Shapes reward: step_reward for each step, goal_reward when terminated.
-
-    Assumptions:
-    - '*_crop' keys are present in observations (e.g., 'chars_crop', 'glyphs_crop').
-    - Goal location is denoted by the '>' character in the 'chars' crop.
-
-    Disclaimer (MiniHack-Corridor-specific tuning):
-    - The default compact one-hot vocabulary targets symbols commonly visible in
-      MiniHack-Corridor-R2-v0: [' ', '-', '|', '#', '.', '<', '>', '@'] plus an
-      optional "other" class. Other MiniHack tasks can expose additional tiles,
-      colors, specials, messages, or different goal markers.
-    - If you switch environments, consider:
-        * Extending `char_vocab` to include the symbols present in that task;
-        * Disabling compact mapping by setting `include_other_class=False` and/or
-          using a broader vocabulary;
-        * Turning off character one-hot (`one_hot=False`) or using `glyphs_crop`
-          by setting `use_chars=False`;
-        * Adjusting goal detection if the goal character is not '>' via
-          `goal_chars=(...)`.
-    - This wrapper assumes the env provides full `chars` alongside `*_crop` so
-      global goal deltas can be computed; if not, dx/dy fall back to zeros.
-    """
-
     def __init__(
         self,
         env: gym.Env,
@@ -125,6 +145,7 @@ class MiniHackWrap(gym.Env):
             for i, code in enumerate(vocab_codes):
                 lut[code] = i
             self._lut_chars = lut
+        self.render_mode = self.env.render_mode
 
         # Delegate action space to underlying env
         self.action_space = env.action_space
@@ -651,40 +672,13 @@ class MiniHackWrap(gym.Env):
         return self.env.close()
 
 
-def make_env_minihack(*, env_id: str = "MiniHack-Corridor-R2-v0", seed: int = 0, view_size: int = 9):
-    """Vector-friendly builder returning a thunk that constructs the wrapped env."""
-    def thunk():
-        if minihack is None:
-            raise ImportError("minihack is not installed or failed to import; please `pip install minihack`.")
-        base = gym.make(
-            env_id,
-            observation_keys=(
-                "chars",
-                "glyphs",
-                "blstats",
-                "chars_crop",
-                "glyphs_crop",
-            ),
-        )
-        env = MiniHackWrap(base, seed=seed, view_size=view_size, step_reward=-1.0, goal_reward=1000.0)
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        return env
-
-    return thunk
 
 
-def get_minihack_env(*, env_id: str = "MiniHack-Corridor-R2-v0", seed: int = 0, view_size: int = 9):
-    if minihack is None:
-        raise ImportError("minihack is not installed or failed to import; please `pip install minihack`.")
-    base = gym.make(
-        env_id,
-        observation_keys=(
-            "chars",
-            "glyphs",
-            "blstats",
-            "chars_crop",
-            "glyphs_crop",
-        ),
-    )
-    env = MiniHackWrap(base, seed=seed, view_size=view_size, step_reward=-1.0, goal_reward=1000.0)
-    return env
+WRAPPING_TO_WRAPPER = {
+    "MainWrapper": MiniHackWrap,
+}
+# WRAPPING_TO_WRAPPER = {
+#     "OneHotChars": OneHotCharsWrapper,
+#     "FixedSeed": FixedSeedWrapper,
+#     "MovementAction": MovementActionWrapper,
+# }

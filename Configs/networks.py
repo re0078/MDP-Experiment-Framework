@@ -81,6 +81,18 @@ minihack_critic = [
     {"type": "tanh"},
     {"type": "linear", "in_features": 64},
 ]
+minihack_actor_v2 = [
+    {"type": "linear", "out_features": 1024},
+    {"type": "relu"},
+    {"type": "linear", "in_features": 1024},
+]
+minihack_critic_v2 = [
+    {"type": "linear", "out_features": 256},
+    {"type": "tanh"},
+    {"type": "linear", "in_features": 256, "out_features": 256},
+    {"type": "tanh"},
+    {"type": "linear", "in_features": 256},
+]
 
 NETWORKS = {
     "fc_network_1": fc_network_1,
@@ -92,4 +104,7 @@ NETWORKS = {
     
     "minihack_critic": minihack_critic,
     "minihack_actor": minihack_actor,
+    
+    "minihack_critic_v2": minihack_critic_v2,
+    "minihack_actor_v2": minihack_actor_v2,
 }

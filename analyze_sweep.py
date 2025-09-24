@@ -136,14 +136,28 @@ def print_info_for_best_trial(exp_dir, ratio, sort_keys=True, indent=2):
     pretty = json.dumps(info_dict, indent=indent, sort_keys=sort_keys)
     print(pretty)
 
+    json.dump(info_dict, open(f"{exp_dir}/best_info.json", "w"), indent=indent, sort_keys=sort_keys)
+
     # Also provide a compact one-liner (handy for single-line Bash assignments)
     # compact = json.dumps(info_dict, separators=(',', ':'), sort_keys=sort_keys)
     # print("\nOne-liner JSON:")
     # print(compact)
     
+
+def parse():
+    import argparse
+    import argcomplete
+    parser = argparse.ArgumentParser()
+    # Config file name
+    parser.add_argument("--remove_files", action='store_true', help="removes the sweep trial directories")
+    # Agent type to run
+    argcomplete.autocomplete(parser)
+    return parser.parse_args()
     
 
 def main(exp_dir, ratio):
+
+    args = parse()
     # 1) Check incomplete trials
     incomplete, num_complete = check_incomplete_runs(exp_dir)
     if incomplete:
@@ -172,10 +186,18 @@ def main(exp_dir, ratio):
     # 4) Print INFO dict for copy-paste
     print_info_for_best_trial(exp_dir, ratio)
 
+    if args.remove_files:
+        import shutil
+        for trial in find_trials(exp_dir):
+            trial_dir = os.path.join(exp_dir, trial)
+            shutil.rmtree(trial_dir)
+        print(f"Removed all trial directories under {exp_dir}")
+
 
 if __name__ == '__main__':
     # --- Configuration ---
-    exp_dir = "Runs/Sweep/MiniHack-Corridor-R2-v0_seed-12_view_size-9/PPO/_seed[2]"
+    # exp_dir = "Runs/Sweep/MiniHack-Corridor-R2-v0_seed-37_view_size-9/PPO/_seed[2]"
+    exp_dir = "Runs/Sweep/MiniHack-Corridor-R2-v0_/MainWrapper(seed-12_view_size-9)/PPO/_seed[0]"
     ratio   = 0.5
     # ---------------------
 

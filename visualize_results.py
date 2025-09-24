@@ -70,7 +70,25 @@ if __name__ == "__main__":
     num_distractors = 25
     Ant_Test = "Runs/Train/Ant-v5_/A2C"
     
-    PPO_minihack = "Runs/Train/MiniHack-Corridor-R2-v0_seed-12_view_size-9/PPO"
+    PPO_minihack1 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-12)/PPO"
+    PPO_minihack2 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-37)/PPO"
+    PPO_minihack3 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-44)/PPO"
+    PPO_minihack4 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-49)/PPO"
+    PPO_minihack5 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-52)/PPO"
+    PPO_minihack6 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-57)/PPO"
+    PPO_minihack7 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-10)/PPO"
+    PPO_minihack8 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-20)/PPO"
+    # PPO_minihack9 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-90)/PPO"
+    # PPO_minihack10 = "Runs/Train/MiniHack-Corridor-R2-v0_reward_win-1.0_reward_lose-0.0_penalty_step-0.0/OneHotChars_FixedSeed(seed-100)/PPO"
+
+    PPO_minihack20 = "Runs/Train/MiniHack-Corridor-R2-v0_seed-20_view_size-9/PPO"
+    PPO_minihack10 = "Runs/Train/MiniHack-Corridor-R2-v0_seed-10_view_size-9/PPO"
+    PPO_minihack30 = "Runs/Train/MiniHack-Corridor-R2-v0_/MainWrapper(seed-30_view_size-9)/PPO"
+    PPO_minihack44 = "Runs/Train/MiniHack-Corridor-R2-v0_/MainWrapper(seed-44_view_size-9)/PPO"
+    PPO_minihack49 = "Runs/Train/MiniHack-Corridor-R2-v0_/MainWrapper(seed-49_view_size-9)/PPO"
+    PPO_minihack1024_12 = "Runs/Train/MiniHack-Corridor-R2-v0_/MainWrapper(seed-12_view_size-9)/PPO"
+    PPO_minihack12 = "Runs/Train/MiniHack-Corridor-R2-v0_seed-12_view_size-9/PPO"
+
     agent_dict = {
         
         # "Didec": gather_experiments(OptionA2C_40Distraction, name_string_conditions=["Mask-input-reg01_"], name_string_anti_conditions=["Distractor"]), #best
@@ -252,9 +270,23 @@ if __name__ == "__main__":
         # "Neuron Only": gather_experiments(OptionA2C_40Distraction, name_string_conditions=["Mask-l1-reg01_"], name_string_anti_conditions=[]),
         # "Input and Neuron": gather_experiments(OptionA2C_40Distraction, name_string_conditions=["Mask-input-l1-reg01_"], name_string_anti_conditions=[]),
         
-        "PPO": gather_experiments(PPO_minihack, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO": gather_experiments(PPO_minihack20, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO": gather_experiments(PPO_minihack10, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO": gather_experiments(PPO_minihack30, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO": gather_experiments(PPO_minihack30, name_string_conditions=[], name_string_anti_conditions=[]),
+        "PPO": gather_experiments(PPO_minihack12, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO2": gather_experiments(PPO_minihack2, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO3": gather_experiments(PPO_minihack3, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO4": gather_experiments(PPO_minihack4, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO5": gather_experiments(PPO_minihack5, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO6": gather_experiments(PPO_minihack6, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO7": gather_experiments(PPO_minihack7, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO8": gather_experiments(PPO_minihack8, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO9": gather_experiments(PPO_minihack9, name_string_conditions=[], name_string_anti_conditions=[]),
+        # "PPO10": gather_experiments(PPO_minihack10, name_string_conditions=[], name_string_anti_conditions=[]),
     
     }
 
-    plot_experiments(agent_dict, "Runs/Figures", name=f"Minihack (12) - PPO", window_size=10, show_ci=True, ignore_last=True, plt_configs=["r_s"], plot_each=True)
+    print("starting")
+    plot_experiments(agent_dict, "Runs/Figures", name=f"Minihack (12) - PPO - test", window_size=10, show_ci=True, ignore_last=True, plt_configs=["r_s"], plot_each=True)
     # plot_experiments(agent_dict, "Runs/Figures", name=f"FourRoom_Transfer_train", window_size=10, show_ci=True, ignore_last=True, plt_configs=["r_s"], plot_each=False)

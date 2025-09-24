@@ -54,9 +54,15 @@ class LoggerExperiment(BaseExperiment):
         all_metrics = []
         pbar = tqdm(range(1, num_episodes + 1), desc="Running episodes")
         for episode_idx in pbar:
+            frames = []
             # Use a seed to ensure reproducibility.
             # ep_seed = episode_idx + seed
             observation, info = env.reset() # seed=ep_seed
+            if env.render_mode == "human":
+                env.render()
+            elif env.render_mode == "ansi":
+                frames.append(env.render())
+                    
             ep_return = 0.0
             steps = 0
             terminated = False
@@ -77,11 +83,16 @@ class LoggerExperiment(BaseExperiment):
                 ep_return += info["actual_reward"] if "actual_reward" in info else reward
                 steps += 1
                 observation = next_observation
+                
+                if env.render_mode == "human":
+                    env.render()
+                elif env.render_mode == "ansi":
+                    frames.append(env.render())
+                
 
-            try:
+            if env.render_mode == "rgb_array_list":
                 frames = env.render()
-            except:
-                frames = []
+            
                 
             metrics = {
                 "ep_return":    ep_return,
@@ -145,10 +156,16 @@ class LoggerExperiment(BaseExperiment):
 
         while steps_so_far < total_steps:
             episode_idx += 1
+            frames = []
             
             # Initialize an episode
             # ep_seed = episode_idx + seed
             observation, info = env.reset() #seed=ep_seed)
+            if env.render_mode == "human":
+                env.render()
+            elif env.render_mode == "ansi":
+                frames.append(env.render())
+                
             ep_return = 0.0
             steps_in_episode = 0
             transitions = []
@@ -185,11 +202,14 @@ class LoggerExperiment(BaseExperiment):
                 # Move to next observation
                 observation = next_observation
                 
+                if env.render_mode == "human":
+                    env.render()
+                elif env.render_mode == "ansi":
+                    frames.append(env.render())
+                
             # Collect frames from the environment if needed
-            try:
+            if env.render_mode == "rgb_array_list":
                 frames = env.render()
-            except:
-                frames = []
             
             # Episode metrics
             metrics = {

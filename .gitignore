@@ -23,6 +23,7 @@ ENV/
 logs/
 *.log
 *.out
+logs*/
 
 # IDE & Editor settings
 .vscode/

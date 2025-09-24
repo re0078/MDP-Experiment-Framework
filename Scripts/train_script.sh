@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=train
+#SBATCH --job-name=test_option
 #SBATCH --cpus-per-task=1   # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #SBATCH --mem=1G          # memory per node
-#SBATCH --time=0-02:00      # time (DD-HH:MM)
-#SBATCH --output=logs/%x_%A_%a.out
-#SBATCH --error=logs/%x_%A_%a.err
+#SBATCH --time=0-01:20      # time (DD-HH:MM)
+#SBATCH --output=logs_test/%x_%A_%a.out
+#SBATCH --error=logs_test/%x_%A_%a.err
 #SBATCH --account=aip-lelis
-#SBATCH --array=0-50
+#SBATCH --array=1,2,3,5,6,7,8,14,15,16,23,28,29,30,32,33,34,36,37,39,42,47
 
 ## SBATCH --gres=gpu:1
 
@@ -33,104 +33,58 @@ export FLEXIBLAS=imkl
 IDX=$SLURM_ARRAY_TASK_ID   # 1…300
 # ---------------Configs--------- 
 CONFIG="config_agents_base"
-AGENT="PPO"
+AGENT="OptionPPO"
 ENV="MiniHack-Corridor-R2-v0"
 #'["NormalizeObs","ClipObs","NormalizeReward", "ClipReward"]' #'["CombineObs"]' #'["ViewSize","FlattenOnehotObj","FixedSeed","FixedRandomDistractor"]'
-ENV_WRAPPING='[]' #'["RGBImgPartialObs", "FixedSeed"]'
+# ENV_WRAPPING='["OneHotChars", "FixedSeed"]' #'["RGBImgPartialObs", "FixedSeed"]'
+ENV_WRAPPING='["MainWrapper"]'
 #'[{}, {}, {}, {}]' #'[{"agent_view_size":9},{},{"seed":5000},{"num_distractors": 40, "seed": 100}]'
-WRAPPING_PARAMS='[]' #'[{"tile_size":7}, {"seed":5000}]'
-ENV_PARAMS='{"seed":12, "view_size":9}' #'{"continuing_task":False}'
-NAME_TAG="$IDX" #"Test_$IDX"
+# WRAPPING_PARAMS='[{}, {"seed":30}]' #'[{"tile_size":7}, {"seed":5000}]'
+WRAPPING_PARAMS='[{"seed":12, "view_size":9}]'
+# ENV_PARAMS='{"reward_win":1.0, "reward_lose": 0.0, "penalty_step": 0.0}' #'{"continuing_task":False}'
+ENV_PARAMS='{}' #'{"continuing_task":False}'
+NAME_TAG="Test_Move_Actions_$IDX" #"Test_$IDX"
 SEED=$IDX
 NUM_WORKERS=1
 
 
 NUM_EPISODES=0
 NUM_RUNS=1
-TOTAL_STEPS=1_000_000
+TOTAL_STEPS=1000_000
 NUM_ENVS=1
-EPISODE_MAX_STEPS=300
+EPISODE_MAX_STEPS=1000
 
-RENDER_MODE=""           # options: human, rgb_array_list, or leave empty for none
+RENDER_MODE="ansi"           # options: human, rgb_array_list, or leave empty for none
 STORE_TRANSITIONS=false  # true / false
 CHECKPOINT_FREQ=0         # integer (e.g. 1000), or leave empty for no checkpoints, 0 for only last
-# INFO='{
-#   "actor_eps": 1e-05,
-#   "actor_network": "minihack_actor",
-#   "actor_step_size": 0.0001,
-#   "anneal_clip_range_actor": false,
-#   "anneal_clip_range_critic": false,
-#   "anneal_step_size_flag": true,
-#   "clip_range_actor_init": 0.2,
-#   "clip_range_critic_init": null,
-#   "critic_coef": 0.5,
-#   "critic_eps": 1e-05,
-#   "critic_network": "minihack_critic",
-#   "critic_step_size": 0.0005,
-#   "entropy_coef": 0.02,
-#   "gamma": 0.99,
-#   "lamda": 0.95,
-#   "max_grad_norm": 0.5,
-#   "mini_batch_size": 64,
-#   "norm_adv_flag": true,
-#   "num_epochs": 5,
-#   "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
-#   "rollout_steps": 256,
-#   "target_kl": 0.01,
-#   "total_steps": 1000000
-# }'  
 
-# INFO='{
-#   "actor_eps": 1e-05,
-#   "actor_network": "minihack_actor",
-#   "actor_step_size": 0.0001,
-#   "anneal_clip_range_actor": false,
-#   "anneal_clip_range_critic": false,
-#   "anneal_step_size_flag": true,
-#   "clip_range_actor_init": 0.1,
-#   "clip_range_critic_init": null,
-#   "critic_coef": 0.5,
-#   "critic_eps": 1e-05,
-#   "critic_network": "minihack_critic",
-#   "critic_step_size": 0.0005,
-#   "entropy_coef": 0.01,
-#   "gamma": 0.99,
-#   "lamda": 0.95,
-#   "max_grad_norm": 0.7,
-#   "mini_batch_size": 64,
-#   "norm_adv_flag": true,
-#   "num_epochs": 5,
-#   "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
-#   "rollout_steps": 256,
-#   "target_kl": 0.02,
-#   "total_steps": 1000000
-# }'
+OPTION_PATH="Runs/Options/MaskedOptionLearner/PPO_Move_Actions_${IDX}/selected_options_5.t"
 
-INFO='{
-  "actor_eps": 1e-05,
-  "actor_network": "minihack_actor",
-  "actor_step_size": 0.0001,
-  "anneal_clip_range_actor": false,
-  "anneal_clip_range_critic": false,
-  "anneal_step_size_flag": true,
-  "clip_range_actor_init": 0.1,
-  "clip_range_critic_init": null,
-  "critic_coef": 0.5,
-  "critic_eps": 1e-05,
-  "critic_network": "minihack_critic",
-  "critic_step_size": 0.0005,
-  "entropy_coef": 0.02,
-  "gamma": 0.99,
-  "lamda": 0.95,
-  "max_grad_norm": 0.7,
-  "mini_batch_size": 64,
-  "norm_adv_flag": true,
-  "num_epochs": 5,
-  "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
-  "rollout_steps": 256,
-  "target_kl": 0.03,
-  "total_steps": 1000000
-}'
+INFO="{
+  \"actor_eps\": 1e-05,
+  \"actor_network\": \"minihack_actor_v2\",
+  \"actor_step_size\": 0.0001,
+  \"anneal_clip_range_actor\": false,
+  \"anneal_clip_range_critic\": false,
+  \"anneal_step_size_flag\": true,
+  \"clip_range_actor_init\": 0.2,
+  \"clip_range_critic_init\": null,
+  \"critic_coef\": 0.5,
+  \"critic_eps\": 1e-05,
+  \"critic_network\": \"minihack_critic_v2\",
+  \"critic_step_size\": 0.0005,
+  \"entropy_coef\": 0.01,
+  \"gamma\": 0.99,
+  \"lamda\": 0.95,
+  \"max_grad_norm\": 0.3,
+  \"mini_batch_size\": 64,
+  \"norm_adv_flag\": true,
+  \"num_epochs\": 5,
+  \"option_path\": \"${OPTION_PATH}\",
+  \"rollout_steps\": 256,
+  \"target_kl\": 0.01,
+  \"total_steps\": 1000000
+}"
   # "option_path": "Runs/Options/MaskedOptionLearner/MaxLen-20_Mask-input-l1_Regularized-0.01_'"$SLURM_ARRAY_TASK_ID"'/selected_options_10.t",
 
 # ------------------------------

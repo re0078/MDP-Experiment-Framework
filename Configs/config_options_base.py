@@ -25,11 +25,17 @@ def exp_path_lst_to_agent_and_trajectory(exp_path_lst, run_ind_lst):
         # Load Agent
         agent = load_agent(os.path.join(exp_path, f"Run{run_ind}_Best_agent.t"))
 
+        # FIXME: This is a tof
+        args.wrapping_params = [args.env_params]
+        args.env_wrapping = ["MainWrapper"]
+        args.env_params = {}
+        args.render_mode = "ansi"
+
         env = get_env(
             env_name=args.env,
             num_envs=args.num_envs,
             max_steps=args.episode_max_steps,
-            render_mode="rgb_array_list", #args.render_mode,
+            render_mode=args.render_mode,
             env_params=args.env_params,
             wrapping_lst=args.env_wrapping,
             wrapping_params=args.wrapping_params,
