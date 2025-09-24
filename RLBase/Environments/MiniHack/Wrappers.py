@@ -10,8 +10,25 @@ WRAPPING_TO_WRAPPER = {
 }
 
 
+DEFAULT_GOAL_POSITIONS_BY_SEED: dict[int, tuple[int, int]] = {
+    # seed: (goal_x, goal_y) // (column idx, row idx)
+    10: (4, 4),
+    12: (66, 7),
+    20: (27, 17),
+    30: (46, 16),
+    37: (36, 5),
+    44: (67, 7),
+    49: (26, 3),
+    50: (4, 3),
+    52: (21, 5),
+    57: (52, 14),
+    60: (19, 13),
+}
+# good seeds: 10, 20, 30, 37, 44, 49, 50, 52, 57, 60
+
 import copy
 import importlib
+import warnings
 
 import gymnasium as gym
 import numpy as np
@@ -69,6 +86,8 @@ class MiniHackWrap(gym.Env):
         include_dxdy: bool = False,
         char_vocab: tuple[str, ...] | None = None,
         include_other_class: bool = True,
+        include_goal_direction: bool = True,
+        goal_positions_by_seed: dict[int, tuple[int, int]] | None = None,
     ):
         super().__init__()
         self.env = env
@@ -83,6 +102,7 @@ class MiniHackWrap(gym.Env):
         self.n_char_classes = int(n_char_classes)
         self.include_dxdy = bool(include_dxdy)
         self.include_other_class = bool(include_other_class)
+        self.include_goal_direction = bool(include_goal_direction)
 
         # Precompute eye for one-hot to avoid reallocs
         self._eye_chars = None
@@ -108,6 +128,26 @@ class MiniHackWrap(gym.Env):
 
         # Delegate action space to underlying env
         self.action_space = env.action_space
+        self.action_space = gym.spaces.discrete.Discrete(self.action_space.n - 3) # excluding open, kick, and search
+        self._last_action_dim = self._infer_last_action_dim()
+        self.last_action: int | None = None
+
+        # Goal position bookkeeping (optional seed overrides)
+        self.goal_positions_by_seed: dict[int, tuple[int, int]] = {}
+        if DEFAULT_GOAL_POSITIONS_BY_SEED:
+            self.goal_positions_by_seed.update(DEFAULT_GOAL_POSITIONS_BY_SEED)
+        if goal_positions_by_seed:
+            for key, value in goal_positions_by_seed.items():
+                try:
+                    seed_key = int(key)
+                    gx, gy = value
+                    self.goal_positions_by_seed[seed_key] = (int(gx), int(gy))
+                except (TypeError, ValueError):
+                    warnings.warn(
+                        f"Invalid goal position entry for seed {key!r}: {value!r} (expected iterable of two ints)",
+                        RuntimeWarning,
+                    )
+        self._goal_position: tuple[int, int] | None = None
 
         # Infer observation space from env.observation_space without resetting.
         # This avoids triggering MiniHack/NLE reset during VectorEnv construction,
@@ -148,6 +188,10 @@ class MiniHackWrap(gym.Env):
             flat_size = int(np.prod(crop_shape))
         if self.include_dxdy:
             flat_size += 2
+        if self.include_goal_direction:
+            flat_size += 4
+        if self._last_action_dim:
+            flat_size += self._last_action_dim
 
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(flat_size,), dtype=np.float32
@@ -209,6 +253,11 @@ class MiniHackWrap(gym.Env):
                 except TypeError:
                     continue
         return False, None
+
+    def _infer_last_action_dim(self) -> int:
+        if isinstance(self.action_space, spaces.Discrete):
+            return int(self.action_space.n)
+        return 0
 
     def _capture_env_state(self, env: gym.Env | None):
         candidates = (
@@ -340,7 +389,11 @@ class MiniHackWrap(gym.Env):
         self.env = env
         self._env_ctor = self._infer_env_ctor(env)
         self.action_space = env.action_space
+        self._last_action_dim = self._infer_last_action_dim()
         self.spec = getattr(env, "spec", None)
+        self._goal_position = None
+        if isinstance(getattr(self, "last_obs", None), dict):
+            self._goal_position = self._resolve_goal_position(self.last_obs)
 
     # ----- Observation helpers -----
     def _grid(self, obs) -> np.ndarray:
@@ -355,6 +408,11 @@ class MiniHackWrap(gym.Env):
         return obs.get("glyphs", obs.get("chars"))
 
     def _agent_xy(self, obs) -> tuple[int, int]:
+        chars = obs.get("chars")
+        if isinstance(chars, np.ndarray):
+            ys, xs = np.where(chars == ord("@"))
+            if xs.size:
+                return int(xs[0]), int(ys[0])
         bl = obs.get("blstats")
         if bl is None:
             return 0, 0
@@ -364,22 +422,59 @@ class MiniHackWrap(gym.Env):
         """ Compute dx,dy using full observation (not the crop).
         dx = agent_x - goal_x, dy = agent_y - goal_y
         """
-        chars = obs.get("chars")
-        print(chars.shape)
-        print("chars")
-        for row in np.char.mod('%c', chars):
-            print("".join(row))
-        if chars is None:
-            return 0.0, 0.0
         ax, ay = self._agent_xy(obs)
+        goal = self._goal_position
+        if goal is None:
+            goal = self._locate_goal_in_chars(obs)
+            self._goal_position = goal
+        if goal is None:
+            return 0.0, 0.0
+        gx, gy = goal
+        return float(ax - gx), float(ay - gy)
+
+    def _locate_goal_in_chars(self, obs) -> tuple[int, int] | None:
+        chars = obs.get("chars")
+        if not isinstance(chars, np.ndarray):
+            return None
         targets = [ord(c) for c in self.goal_chars]
         ys, xs = np.where(np.isin(chars, targets))
         if xs.size == 0:
-            return 0.0, 0.0
+            return None
+        ax, ay = self._agent_xy(obs)
         dists = np.abs(xs - ax) + np.abs(ys - ay)
-        i = int(np.argmin(dists))
-        gx, gy = int(xs[i]), int(ys[i])
-        return float(ax - gx), float(ay - gy)
+        idx = int(np.argmin(dists))
+        return int(xs[idx]), int(ys[idx])
+
+    def _resolve_goal_position(self, obs) -> tuple[int, int] | None:
+        seed_key: int | None = None
+        if self.seed_ is not None:
+            try:
+                seed_key = int(self.seed_)
+            except (TypeError, ValueError):
+                seed_key = None
+        if seed_key is not None and seed_key in self.goal_positions_by_seed:
+            return self.goal_positions_by_seed[seed_key]
+        return self._locate_goal_in_chars(obs)
+
+    def _goal_direction(self, obs) -> np.ndarray:
+        compass = np.zeros(4, dtype=np.float32)
+        goal = self._goal_position
+        if goal is None:
+            goal = self._resolve_goal_position(obs)
+            self._goal_position = goal
+        if goal is None:
+            return compass
+        ax, ay = self._agent_xy(obs)
+        gx, gy = goal
+        if gy < ay:
+            compass[0] = 1.0  # up
+        if gx < ax:
+            compass[1] = 1.0  # left
+        if gx > ax:
+            compass[2] = 1.0  # right
+        if gy > ay:
+            compass[3] = 1.0  # down
+        return compass
 
     def _encode_crop(self, crop: np.ndarray) -> np.ndarray:
         # One-hot encode characters if requested
@@ -403,10 +498,22 @@ class MiniHackWrap(gym.Env):
         dx = dy = 0.0
         if self.include_dxdy:
             dx, dy = self._global_goal_delta(obs)
-        enc = self._encode_crop(crop)
+        parts = [self._encode_crop(crop)]
         if self.include_dxdy:
-            enc = np.concatenate([enc, np.array([dx, dy], dtype=np.float32)])
-        return enc.astype(np.float32)
+            parts.append(np.array([dx, dy], dtype=np.float32))
+        if self.include_goal_direction:
+            parts.append(self._goal_direction(obs))
+        if self._last_action_dim:
+            parts.append(self._last_action_one_hot())
+        return np.concatenate(parts).astype(np.float32, copy=False)
+
+    def _last_action_one_hot(self) -> np.ndarray:
+        if self._last_action_dim <= 0:
+            return np.empty(0, dtype=np.float32)
+        vec = np.zeros(self._last_action_dim, dtype=np.float32)
+        if self.last_action is not None and 0 <= self.last_action < self._last_action_dim:
+            vec[int(self.last_action)] = 1.0
+        return vec
 
     def print_one_hot_observation(self, encoded_obs: np.ndarray) -> None:
         """Decode a flattened one-hot observation back to characters and print."""
@@ -416,6 +523,14 @@ class MiniHackWrap(gym.Env):
             raise RuntimeError("Character vocabulary has not been initialized; cannot decode observation.")
 
         obs = np.asarray(encoded_obs, dtype=np.float32)
+        if self._last_action_dim:
+            if obs.size < self._last_action_dim:
+                raise ValueError("Encoded observation is too short to contain last action components.")
+            obs = obs[:-self._last_action_dim]
+        if self.include_goal_direction:
+            if obs.size < 4:
+                raise ValueError("Encoded observation is too short to contain goal direction components.")
+            obs = obs[:-4]
         if self.include_dxdy:
             if obs.size < 2:
                 raise ValueError("Encoded observation is too short to contain dx/dy components.")
@@ -452,6 +567,7 @@ class MiniHackWrap(gym.Env):
     def reset(self, *, seed: int | None = None, options=None):
         # traceback.print_stack()
         self.steps = 0
+        self.last_action = None
         if seed is not None:
             self.seed_ = seed
         else:
@@ -461,6 +577,8 @@ class MiniHackWrap(gym.Env):
         self.last_obs = obs
         self._last_info = info
         self._last_done_flag = False
+        self._goal_position = None
+        self._goal_position = self._resolve_goal_position(obs)
         return self._build_observation(obs), info
 
     def get_observation(self):
@@ -471,7 +589,12 @@ class MiniHackWrap(gym.Env):
         self.steps += 1
         self.last_obs = obs
         self._last_info = info
-        
+        if self._last_action_dim:
+            try:
+                self.last_action = int(action)
+            except (TypeError, ValueError):
+                self.last_action = None
+
         reward = self.goal_reward if terminated and info["end_status"] == NetHackStaircase.StepStatus.TASK_SUCCESSFUL else self.step_reward
 
         # CAVIAT: No option implementation

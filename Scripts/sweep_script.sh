@@ -6,7 +6,7 @@
 #SBATCH --output=logs/%x_%A_%a.out
 #SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --account=aip-lelis
-#SBATCH --array=0-971      # check HP_SEARCH_SPACE to calculate the space size
+#SBATCH --array=1-971      # check HP_SEARCH_SPACE to calculate the space size
 
 ########SBATCH --gres=gpu:1
 
@@ -18,7 +18,8 @@ cd ~/scratch/MDP-Experiment-Framework
 # module python/3.10
 module load mujoco
 export MUJOCO_GL=egl
-source ~/ENV/bin/activate
+# source ~/ENV/bin/activate
+source ~/scratch/envs/venv2/bin/activate
 
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -37,8 +38,8 @@ ENV="MiniHack-Corridor-R2-v0"
 ENV_WRAPPING='[]' #'["RGBImgPartialObs", "FixedSeed"]' #, "DropMission", "FrameStack", "MergeStackIntoChannels"]'
 #'[{}, {}, {}, {}]' #'[{"agent_view_size":9},{},{"seed":5000},{"num_distractors": 40, "seed": 100}]'
 WRAPPING_PARAMS='[]' #'[{"tile_size":7}, {"seed":5000}]' #, {}, {"stack_size":4}, {}]'
-ENV_PARAMS='{"seed":12, "view_size":9}' #'{"continuing_task":False}'
-SEED=1
+ENV_PARAMS='{"seed":60, "view_size":9}' #'{"continuing_task":False}'
+SEED=2
 
 NUM_RUNS=3
 NUM_WORKERS=3 #If you want all the runs to be parallel NUM_WORKERS and NUM_RUNS should be equal
@@ -79,7 +80,7 @@ HP_SEARCH_SPACE='{
   "target_kl":[0.01, 0.02, 0.03],
   "actor_step_size": [1e-4, 3e-4, 5e-4], 
   "critic_step_size": [1e-4, 3e-4, 5e-4],
-  "entropy_coef": [0.0, 0.01, 0.02],
+  "entropy_coef": [0.01, 0.02, 0.05],
   "max_grad_norm": [0.3, 0.5, 0.7]
 }'
 # "mini_batch_size":  [32, 64]

@@ -8,7 +8,7 @@
 #SBATCH --account=aip-lelis
 #SBATCH --array=0-50
 
-#SBATCH --gres=gpu:1
+## SBATCH --gres=gpu:1
 
 set -euo pipefail
 
@@ -19,7 +19,8 @@ cd ~/scratch/MDP-Experiment-Framework
 # module python/3.10
 module load mujoco
 export MUJOCO_GL=egl
-source ~/ENV/bin/activate
+# source ~/ENV/bin/activate
+source ~/scratch/envs/venv2/bin/activate
 
 # Pin BLAS/OpenMP
 export OMP_NUM_THREADS=1
@@ -53,6 +54,58 @@ EPISODE_MAX_STEPS=300
 RENDER_MODE=""           # options: human, rgb_array_list, or leave empty for none
 STORE_TRANSITIONS=false  # true / false
 CHECKPOINT_FREQ=0         # integer (e.g. 1000), or leave empty for no checkpoints, 0 for only last
+# INFO='{
+#   "actor_eps": 1e-05,
+#   "actor_network": "minihack_actor",
+#   "actor_step_size": 0.0001,
+#   "anneal_clip_range_actor": false,
+#   "anneal_clip_range_critic": false,
+#   "anneal_step_size_flag": true,
+#   "clip_range_actor_init": 0.2,
+#   "clip_range_critic_init": null,
+#   "critic_coef": 0.5,
+#   "critic_eps": 1e-05,
+#   "critic_network": "minihack_critic",
+#   "critic_step_size": 0.0005,
+#   "entropy_coef": 0.02,
+#   "gamma": 0.99,
+#   "lamda": 0.95,
+#   "max_grad_norm": 0.5,
+#   "mini_batch_size": 64,
+#   "norm_adv_flag": true,
+#   "num_epochs": 5,
+#   "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
+#   "rollout_steps": 256,
+#   "target_kl": 0.01,
+#   "total_steps": 1000000
+# }'  
+
+# INFO='{
+#   "actor_eps": 1e-05,
+#   "actor_network": "minihack_actor",
+#   "actor_step_size": 0.0001,
+#   "anneal_clip_range_actor": false,
+#   "anneal_clip_range_critic": false,
+#   "anneal_step_size_flag": true,
+#   "clip_range_actor_init": 0.1,
+#   "clip_range_critic_init": null,
+#   "critic_coef": 0.5,
+#   "critic_eps": 1e-05,
+#   "critic_network": "minihack_critic",
+#   "critic_step_size": 0.0005,
+#   "entropy_coef": 0.01,
+#   "gamma": 0.99,
+#   "lamda": 0.95,
+#   "max_grad_norm": 0.7,
+#   "mini_batch_size": 64,
+#   "norm_adv_flag": true,
+#   "num_epochs": 5,
+#   "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
+#   "rollout_steps": 256,
+#   "target_kl": 0.02,
+#   "total_steps": 1000000
+# }'
+
 INFO='{
   "actor_eps": 1e-05,
   "actor_network": "minihack_actor",
@@ -60,7 +113,7 @@ INFO='{
   "anneal_clip_range_actor": false,
   "anneal_clip_range_critic": false,
   "anneal_step_size_flag": true,
-  "clip_range_actor_init": 0.2,
+  "clip_range_actor_init": 0.1,
   "clip_range_critic_init": null,
   "critic_coef": 0.5,
   "critic_eps": 1e-05,
@@ -69,15 +122,15 @@ INFO='{
   "entropy_coef": 0.02,
   "gamma": 0.99,
   "lamda": 0.95,
-  "max_grad_norm": 0.5,
+  "max_grad_norm": 0.7,
   "mini_batch_size": 64,
   "norm_adv_flag": true,
   "num_epochs": 5,
   "option_path": "Runs/Options/MaskedOptionLearner/PPO_MaxLen-20_RGB_Mask-l8_Regularized-0.01_0/selected_options_5.t",
   "rollout_steps": 256,
-  "target_kl": 0.01,
+  "target_kl": 0.03,
   "total_steps": 1000000
-}'  
+}'
   # "option_path": "Runs/Options/MaskedOptionLearner/MaxLen-20_Mask-input-l1_Regularized-0.01_'"$SLURM_ARRAY_TASK_ID"'/selected_options_10.t",
 
 # ------------------------------
