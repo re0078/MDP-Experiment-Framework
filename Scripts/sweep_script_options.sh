@@ -2,8 +2,8 @@
 #SBATCH --job-name=sweep-ppo
 #SBATCH --cpus-per-task=3
 #SBATCH --mem=1G          # memory per node
-#SBATCH --time=0-02:00    # time (DD-HH:MM)
-#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --time=0-03:00    # time (DD-HH:MM)
+#SBATCH --output=logs_sweepoption/%x_%A_%a.out
 #SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --account=aip-lelis
 #SBATCH --array=0-971      # check HP_SEARCH_SPACE to calculate the space size
@@ -32,12 +32,12 @@ IDX=$SLURM_ARRAY_TASK_ID
 
 # --------------- Hyperparam sweep settings ---------------
 CONFIG="config_agents_base"
-AGENT="PPO"
+AGENT="OptionPPO"
 ENV="MiniHack-Corridor-R2-v0"
 #'["NormalizeObs","ClipObs","NormalizeReward", "ClipReward"]' #'["CombineObs"]' #'["ViewSize","FlattenOnehotObj","FixedSeed","FixedRandomDistractor"]'
 ENV_WRAPPING='["MainWrapper"]' #'["RGBImgPartialObs", "FixedSeed"]' #, "DropMission", "FrameStack", "MergeStackIntoChannels"]'
 #'[{}, {}, {}, {}]' #'[{"agent_view_size":9},{},{"seed":5000},{"num_distractors": 40, "seed": 100}]'
-WRAPPING_PARAMS='[{"seed":37, "view_size":9}]' #'[{"tile_size":7}, {"seed":5000}]' #, {}, {"stack_size":4}, {}]'
+WRAPPING_PARAMS='[{"seed":30, "view_size":9}]' #'[{"tile_size":7}, {"seed":5000}]' #, {}, {"stack_size":4}, {}]'
 ENV_PARAMS='{}' #'{"continuing_task":False}'
 SEED=0
 
@@ -49,7 +49,7 @@ EPISODE_MAX_STEPS=1000
 NUM_ENVS=1
 
 
-NAME_TAG="PPO_"
+NAME_TAG="PPO__Move_Actions_Mask_Input_reg"
 INFO='{
   "gamma": 0.99,
   "lamda": 0.95,
